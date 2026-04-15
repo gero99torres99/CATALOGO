@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monje Negro - Catálogo</title>
+    <style>
+        body { background-color: #050505; color: white; font-family: 'Helvetica', sans-serif; margin: 0; padding-bottom: 100px; }
+        header { background: #000; padding: 30px; text-align: center; border-bottom: 3px solid #ed1c24; }
+        .brand { color: #ed1c24; font-size: 2.5em; font-weight: bold; margin: 0; text-transform: uppercase; }
+        .sub { color: #fff; font-size: 1em; letter-spacing: 3px; }
+        
+        .container { padding: 20px; max-width: 600px; margin: auto; }
+        .seccion-titulo { border-left: 4px solid #ed1c24; padding-left: 10px; margin: 30px 0 20px; text-transform: uppercase; }
+
+        .producto { background: #1a1a1a; display: flex; align-items: center; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333; }
+        .info { flex-grow: 1; }
+        .nombre { font-weight: bold; font-size: 1.1em; display: block; }
+        .precio { color: #ed1c24; font-size: 1.2em; font-weight: bold; }
+        
+        .btn-add { background: #ed1c24; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        
+        #cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #25d366; color: white; padding: 20px; text-align: center; font-weight: bold; text-decoration: none; display: none; font-size: 1.2em; box-shadow: 0 -5px 15px rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1 class="brand">MONJE NEGRO</h1>
+    <div class="sub">BOTILLERÍA</div>
+</header>
+
+<div class="container">
+    <h2 class="seccion-titulo">Mes del Malbec 🍷</h2>
+    
+    <div class="producto">
+        <div class="info">
+            <span class="nombre">El Enemigo Malbec</span>
+            <span class="precio">$25.500</span>
+        </div>
+        <button class="btn-add" onclick="addItem('El Enemigo Malbec', 25500)">AÑADIR</button>
+    </div>
+
+    <div class="producto">
+        <div class="info">
+            <span class="nombre">DV Catena Malbec</span>
+            <span class="precio">$22.000</span>
+        </div>
+        <button class="btn-add" onclick="addItem('DV Catena Malbec', 22000)">AÑADIR</button>
+    </div>
+</div>
+
+<a href="#" id="cart-bar" onclick="sendWpp()">
+    PEDIR POR WHATSAPP (<span id="count">0</span>)
+</a>
+
+<script>
+    let cart = [];
+    
+    function addItem(name, price) {
+        cart.push({name, price});
+        document.getElementById('cart-bar').style.display = 'block';
+        document.getElementById('count').innerText = cart.length;
+    }
+
+    function sendWpp() {
+        let phone = "5493512345678"; // <--- CAMBIA ESTO POR TU CELULAR (Cod. Area + Numero sin el +)
+        let text = "¡Hola Monje Negro! 🍷 Quiero encargar:%0A";
+        cart.forEach(item => {
+            text += `- ${item.name} ($${item.price})%0A`;
+        });
+        let url = `https://wa.me/${phone}?text=${text}`;
+        window.open(url, '_blank');
+    }
+</script>
+
+</body>
+</html>
