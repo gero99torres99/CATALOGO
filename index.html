@@ -55,8 +55,41 @@
 </a>
 
 <script>
+   const EXCEL_URL = https://docs.google.com/spreadsheets/d/e/2PACX-1vRh5hj_V9tKP0pltPLCB8WMDw2f6L0DkKUWx0adnDXkWPVCqsqR-hOMFLPBKq6DIceIM2o7Pz-Z0COM/pubhtml;
+
     let cart = [];
-    
+
+    async function fetchProducts() {
+        try {
+            const response = await fetch(EXCEL_URL);
+            const data = await response.text();
+            const rows = data.split('\n').slice(1); // Salta la primera fila de títulos
+            const grid = document.getElementById('catalogo-grid');
+            grid.innerHTML = '';
+
+            rows.forEach(row => {
+                const cols = row.split(','); // Divide por comas
+                if (cols.length >= 2) {
+                    const name = cols[0];
+                    const price = cols[1];
+                    const category = cols[2];
+                    const img = cols[3] || 'https://via.placeholder.com/150';
+
+                    grid.innerHTML += `
+                        <div class="producto">
+                            <img src="${img}" alt="${name}">
+                            <span class="nombre">${name}</span>
+                            <span class="precio">$${price}</span>
+                            <button class="btn-add" onclick="addItem('${name}', '${price}')">AÑADIR</button>
+                        </div>
+                    `;
+                }
+            });
+        } catch (e) {
+            console.error("Error cargando el Excel", e);
+        }
+    }
+
     function addItem(name, price) {
         cart.push({name, price});
         document.getElementById('cart-bar').style.display = 'block';
@@ -64,15 +97,13 @@
     }
 
     function sendWpp() {
-        let phone = "5493512345678"; // <--- CAMBIA ESTO POR TU CELULAR (Cod. Area + Numero sin el +)
+        let phone = "549351XXXXXXX"; // TU CELULAR ACÁ
         let text = "¡Hola Monje Negro! 🍷 Quiero encargar:%0A";
-        cart.forEach(item => {
-            text += `- ${item.name} ($${item.price})%0A`;
-        });
-        let url = `https://wa.me/${phone}?text=${text}`;
-        window.open(url, '_blank');
+        cart.forEach(item => { text += `- ${item.name} ($${item.price})%0A`; });
+        window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
     }
-</script>
 
+    fetchProducts();
+</script>
 </body>
 </html>
