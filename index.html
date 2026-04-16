@@ -70,3 +70,180 @@
     <div id="loading" style="text-align: center; padding-top: 50px; color: var(--rojo);">Preparando la cava...</div>
     <div id="catalogo-grid" class="grid"></div>
 </div>
+
+<div id="cart-bar" onclick="toggleModal(true)">
+    🛒 VER MI PEDIDO (<span id="count">0</span>)
+</div>
+
+<div id="cart-modal">
+    <div class="modal-content">
+        <h2 style="color:var(--rojo); margin-top:0; border-bottom: 1px solid var(--rojo); padding-bottom: 10px;">Resumen del Pedido</h2>
+        <div id="cart-list"></div>
+        <div class="modal-footer">
+            <div id="total-details" style="text-align: right; margin-bottom: 15px; line-height: 1.4;"></div>
+            <button class="btn-send" onclick="sendWpp()">ENVIAR PEDIDO POR WHATSAPP</button>
+            <button class="btn-close" onclick="toggleModal(false)">Añadir más productos</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const EXCEL_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRh5hj_V9tKP0pltPLCB8WMDw2f6L0DkKUWx0adnDXkWPVCqsqR-hOMFLPBKq6DIceIM2o7Pz-Z0COM/pub?output=csv';
+    const WHATSAPP_NUMBER = "5493512345678"; 
+
+    const TIPOS = ["Todos", "Ofertas", "Vino Tinto", "Vino Blanco", "Espumante", "Vino Rosado", "Otras Bebidas"];
+    const CATEGORIAS_PROMO = ["Vino Tinto", "Vino Blanco", "Vino Rosado", "Espumante"];
+
+    let allProducts = [];
+    let cart = [];
+    let fTipo = 'Todos';
+
+    async function fetchProducts() {
+        try {
+            const res = await fetch(EXCEL_URL + '&t=' + new Date().getTime());
+            const text = await res.text();
+            const rows = text.split('\n').slice(1);
+            allProducts = rows.map(r => {
+                const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                if (c.length < 5) return null;
+                const clean = (v) => v ? v.replace(/"/g, '').trim() : '';
+                return { name: clean(c[0]), price: clean(c[1]), img: clean(c[3]) || 'https://via.placeholder.com/200', tipo: clean(c[4]) };
+            }).filter(p => p && p.name !== "");
+            renderFiltros();
+            renderProducts();
+            document.getElementById('loading').style.display = 'none';
+        } catch (e) { console.error(e); }
+    }
+
+    function renderFiltros() {
+        document.getElementById('filtros-tipo').innerHTML = TIPOS.map(t => `<button class="btn-filtro ${t===fTipo?'active':''}" onclick="setFiltro('${t}')">${t}</button>`).join('');
+    }
+
+    function setFiltro(val) { fTipo = val; renderFiltros(); renderProducts(); }
+
+    function updateQty(btn, delta) {
+        const input = btn.parentElement.querySelector('input');
+        let val = parseInt(input.value) + delta;
+        if (val < 1) val = 1;
+        input.value = val;
+    }
+
+    function renderProducts() {
+        const grid = document.getElementById('catalogo-grid');
+        const search = document.getElementById('buscador').value.toLowerCase();
+        grid.innerHTML = '';
+        const filtered = allProducts.filter(p => {
+            const mTipo = fTipo === 'Todos' || p.tipo.toLowerCase() === fTipo.toLowerCase();
+            const mSearch = p.name.toLowerCase().includes(search);
+            return mTipo && mSearch;
+        });
+        filtered.forEach((p, index) => {
+            grid.innerHTML += `
+                <div class="producto">
+                    <img src="${p.img}">
+                    <span class="nombre">${p.name}</span>
+                    <span class="precio">$${p.price}</span>
+                    <div class="selector-cantidad">
+                        <button class="btn-qty" onclick="updateQty(this, -1)">-</button>
+                        <input type="number" class="input-qty" value="1" id="qty-${index}" readonly>
+                        <button class="btn-qty" onclick="updateQty(this, 1)">+</button>
+                    </div>
+                    <button class="btn-add" onclick="addItem('${p.name}', '${p.price}', '${p.tipo}', 'qty-${index}')">Añadir</button>
+                </div>`;
+        });
+    }
+
+    function addItem(n, p, t, qtyId) {
+        const qty = parseInt(document.getElementById(qtyId).value);
+        const item = cart.find(i => i.n === n);
+        if (item) item.q += qty; else cart.push({n, p, t, q: qty});
+        
+        // Reset cantidad del selector a 1 después de añadir
+        document.getElementById(qtyId).value = 1;
+        updateCartUI();
+    }
+
+    function removeItem(index) {
+        cart.splice(index, 1);
+        updateCartUI();
+        if (cart.length === 0) toggleModal(false); else renderCartModal();
+    }
+
+    function toggleModal(show) {
+        document.getElementById('cart-modal').style.display = show ? 'flex' : 'none';
+        if(show) renderCartModal();
+    }
+
+    function updateCartUI() {
+        const count = cart.reduce((acc, i) => acc + i.q, 0);
+        document.getElementById('cart-bar').style.display = count > 0 ? 'block' : 'none';
+        document.getElementById('count').innerText = count;
+    }
+
+    function renderCartModal() {
+        const list = document.getElementById('cart-list');
+        const details = document.getElementById('total-details');
+        list.innerHTML = '';
+        
+        let subtotal = 0;
+        let itemsVino = 0;
+
+        cart.forEach((item, index) => {
+            const precioNum = parseFloat(item.p.replace(/\./g, '').replace(',', '.')) || 0;
+            subtotal += (precioNum * item.q);
+            if (CATEGORIAS_PROMO.some(cat => cat.toLowerCase() === item.t.toLowerCase())) itemsVino += item.q;
+
+            list.innerHTML += `
+                <div class="cart-item">
+                    <div class="cart-item-info">
+                        <strong>${item.q}x ${item.n}</strong><br>
+                        <small>$${item.p} c/u</small>
+                    </div>
+                    <span>$${(precioNum * item.q).toLocaleString('es-AR')}</span>
+                    <button class="cart-remove" onclick="removeItem(${index})">✕</button>
+                </div>`;
+        });
+
+        let htmlDetails = `<div>Subtotal: $${subtotal.toLocaleString('es-AR')}</div>`;
+        if (itemsVino >= 6) {
+            const desc = subtotal * 0.15;
+            htmlDetails += `
+                <div style="color: #d4af37; font-weight:bold;">Descuento Promo (15% OFF): -$${desc.toLocaleString('es-AR')}</div>
+                <div style="font-size:1.3em; font-weight:bold; margin-top:5px; color: #fff;">TOTAL: $${(subtotal - desc).toLocaleString('es-AR')}</div>`;
+        } else {
+            htmlDetails += `<div style="font-size:1.3em; font-weight:bold; margin-top:5px; color: #fff;">TOTAL: $${subtotal.toLocaleString('es-AR')}</div>`;
+            if (itemsVino > 0) {
+                htmlDetails += `<small style="color:#888;">Llevás ${itemsVino} vinos. ¡Sumá ${6 - itemsVino} más para el 15% OFF!</small>`;
+            }
+        }
+        details.innerHTML = htmlDetails;
+    }
+
+    function sendWpp() {
+        let subtotal = 0;
+        let itemsVino = 0;
+        let msg = "¡Hola Monje Negro! 🍷 Este es mi pedido:%0A%0A";
+        
+        cart.forEach(i => {
+            const pNum = parseFloat(i.p.replace(/\./g, '').replace(',', '.')) || 0;
+            subtotal += (pNum * i.q);
+            if (CATEGORIAS_PROMO.some(cat => cat.toLowerCase() === i.t.toLowerCase())) itemsVino += i.q;
+            msg += `• ${i.q}x ${i.n} ($${i.p} c/u)%0A`;
+        });
+
+        if (itemsVino >= 6) {
+            const desc = subtotal * 0.15;
+            msg += `%0A*Subtotal:* $${subtotal.toLocaleString('es-AR')}`;
+            msg += `%0A*Descuento (15%):* -$${desc.toLocaleString('es-AR')}`;
+            msg += `%0A*TOTAL FINAL: $${(subtotal - desc).toLocaleString('es-AR')}*`;
+        } else {
+            msg += `%0A*TOTAL FINAL: $${subtotal.toLocaleString('es-AR')}*`;
+        }
+
+        window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank');
+    }
+
+    fetchProducts();
+</script>
+</body>
+</html>
