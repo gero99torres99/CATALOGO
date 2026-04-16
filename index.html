@@ -31,8 +31,8 @@
 
         /* Grid de Productos */
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; margin-top: 20px; }
-        .producto { background: var(--gris); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid #333; display: flex; flex-direction: column; animation: fadeIn 0.5s; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .producto { background: var(--gris); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid #333; display: flex; flex-direction: column; animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         .producto img { width: 100%; height: 180px; object-fit: contain; margin-bottom: 12px; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5)); }
         
@@ -75,7 +75,7 @@
 
 <script>
     const EXCEL_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRh5hj_V9tKP0pltPLCB8WMDw2f6L0DkKUWx0adnDXkWPVCqsqR-hOMFLPBKq6DIceIM2o7Pz-Z0COM/pub?output=csv';
-    const WHATSAPP_NUMBER = "5493517874303"; 
+    const WHATSAPP_NUMBER = "5493512345678"; 
 
     let allProducts = [];
     let cart = [];
@@ -84,19 +84,23 @@
 
     async function fetchProducts() {
         try {
-            const res = await fetch(EXCEL_URL);
+            const res = await fetch(EXCEL_URL + '&cachebuster=' + new Date().getTime());
             const text = await res.text();
             const rows = text.split('\n').slice(1);
             
             allProducts = rows.map(r => {
                 const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 if (c.length < 2) return null;
+                
+                // LIMPIEZA DE DATOS (quita comillas y espacios extra)
+                const clean = (val) => val ? val.replace(/"/g, '').trim() : '';
+
                 return {
-                    name: c[0]?.replace(/"/g, '').trim(),
-                    price: c[1]?.replace(/"/g, '').trim(),
-                    img: c[3]?.replace(/"/g, '').trim() || 'https://via.placeholder.com/200x250?text=Vino',
-                    tipo: c[4]?.replace(/"/g, '').trim() || 'Otros',
-                    cepa: c[5]?.replace(/"/g, '').trim() || 'Otros'
+                    name: clean(c[0]),
+                    price: clean(c[1]),
+                    img: clean(c[3]) || 'https://via.placeholder.com/200x250?text=Vino',
+                    tipo: clean(c[4]) || 'Otros',
+                    cepa: clean(c[5]) || 'Otros'
                 };
             }).filter(p => p && p.name !== "");
 
@@ -109,7 +113,6 @@
     function renderFiltros() {
         const tipos = ['Todos', ...new Set(allProducts.map(p => p.tipo))];
         
-        // Filtramos las cepas que pertenecen al TIPO seleccionado
         let cepasDisponibles = [];
         if (fTipo === 'Todos') {
             cepasDisponibles = ['Todos', ...new Set(allProducts.map(p => p.cepa))];
@@ -127,7 +130,7 @@
     function setFiltro(cat, val) {
         if(cat === 'tipo') {
             fTipo = val;
-            fCepa = 'Todos'; // Resetear cepa al cambiar de tipo
+            fCepa = 'Todos'; 
         } else {
             fCepa = val;
         }
@@ -138,11 +141,18 @@
     function renderProducts() {
         const grid = document.getElementById('catalogo-grid');
         grid.innerHTML = '';
-        const filtered = allProducts.filter(p => 
-            (fTipo === 'Todos' || p.tipo === fTipo) && 
-            (fCepa === 'Todos' || p.cepa === fCepa)
-        );
         
+        const filtered = allProducts.filter(p => {
+            const matchTipo = (fTipo === 'Todos' || p.tipo === fTipo);
+            const matchCepa = (fCepa === 'Todos' || p.cepa === fCepa);
+            return matchTipo && matchCepa;
+        });
+        
+        if (filtered.length === 0) {
+            grid.innerHTML = '<p style="text-align:center; width:100%; color:#666;">No hay productos en esta categoría.</p>';
+            return;
+        }
+
         filtered.forEach(p => {
             grid.innerHTML += `
                 <div class="producto">
@@ -165,11 +175,13 @@
     }
 
     function sendWpp() {
-        let msg = "¡Hola Monje Negro! 🍷 Pedido:%0A%0A";
+        let msg = "¡Hola Monje Negro! 🍷 Pedido de catálogo:%0A%0A";
         let tot = 0;
         cart.forEach(i => {
             msg += `• ${i.n} ($${i.p})%0A`;
-            tot += parseFloat(i.p.replace(/\./g, '').replace(',', '.')) || 0;
+            // Limpia puntos para sumar el total
+            let num = parseFloat(i.p.replace(/\./g, '').replace(',', '.')) || 0;
+            tot += num;
         });
         msg += `%0A*TOTAL: $${tot.toLocaleString('es-AR')}*`;
         window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank');
