@@ -10,32 +10,48 @@
 
         :root { --rojo: #ed1c24; --negro: #0a0a0a; --gris: #1a1a1a; }
         body { background-color: var(--negro); color: white; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding-bottom: 120px; }
-        header { background: black; padding: 30px 20px; text-align: center; border-bottom: 3px solid var(--rojo); }
+        
+        header { background: black; padding: 25px 20px; text-align: center; border-bottom: 3px solid var(--rojo); }
         .brand { color: var(--rojo); font-family: 'AM Tripoli', sans-serif; font-size: 3.2em; margin: 0; text-transform: uppercase; line-height: 1; }
         .sub { color: white; font-family: 'Monley', cursive; font-size: 1.8em; margin-top: -5px; display: block; text-transform: lowercase; }
 
         .container { padding: 15px; max-width: 1000px; margin: auto; }
 
-        .filtros-area { background: #000; padding: 10px 0; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #222; }
-        .filtro-label { font-size: 0.7em; color: #666; text-transform: uppercase; margin: 8px 0; display: block; letter-spacing: 1px; font-weight: bold; }
-        .filtro-grupo { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; scrollbar-width: none; }
+        /* Área de búsqueda y filtros */
+        .filtros-area { background: #000; padding: 15px 0; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #222; }
+        
+        /* Estilos del Buscador */
+        .search-container { margin-bottom: 15px; position: relative; }
+        #buscador {
+            width: 100%;
+            padding: 12px 15px;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: white;
+            font-size: 1em;
+            outline: none;
+            box-sizing: border-box;
+            transition: 0.3s;
+        }
+        #buscador:focus { border-color: var(--rojo); box-shadow: 0 0 10px rgba(237, 28, 36, 0.2); }
+
+        .filtro-label { font-size: 0.7em; color: #666; text-transform: uppercase; margin: 8px 0 5px 0; display: block; letter-spacing: 1px; font-weight: bold; }
+        .filtro-grupo { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
         .filtro-grupo::-webkit-scrollbar { display: none; }
         
         .btn-filtro { background: #222; color: #aaa; border: 1px solid #333; padding: 8px 16px; border-radius: 5px; cursor: pointer; white-space: nowrap; font-size: 0.85em; transition: 0.3s; }
         .btn-filtro.active { background: var(--rojo); color: white; border-color: var(--rojo); font-weight: bold; }
 
+        /* Grid */
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; margin-top: 20px; }
         .producto { background: var(--gris); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid #333; display: flex; flex-direction: column; }
         .producto img { width: 100%; height: 180px; object-fit: contain; margin-bottom: 12px; }
         
-        .etiquetas-producto { display: flex; gap: 4px; justify-content: center; margin-bottom: 8px; }
-        .tag { font-size: 0.55em; background: #000; color: var(--rojo); padding: 3px 7px; border-radius: 4px; text-transform: uppercase; border: 1px solid #333; font-weight: bold; }
-        
-        .nombre { font-weight: bold; font-size: 0.95em; height: 38px; overflow: hidden; margin-bottom: 8px; line-height: 1.2; }
+        .nombre { font-weight: bold; font-size: 0.95em; min-height: 38px; margin-bottom: 8px; line-height: 1.2; }
         .precio { color: #fff; font-size: 1.2em; font-weight: bold; margin-bottom: 12px; }
 
-        .controles-compra { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
-        .selector-cantidad { display: flex; align-items: center; justify-content: center; background: #000; border-radius: 6px; border: 1px solid #333; }
+        .selector-cantidad { display: flex; align-items: center; justify-content: center; background: #000; border-radius: 6px; border: 1px solid #333; margin-bottom: 8px; }
         .btn-qty { background: #222; color: white; border: none; padding: 8px 12px; cursor: pointer; width: 40px; font-weight: bold; }
         .input-qty { background: transparent; color: white; border: none; width: 40px; text-align: center; font-weight: bold; }
 
@@ -53,10 +69,14 @@
 
 <div class="filtros-area">
     <div class="container">
+        <div class="search-container">
+            <input type="text" id="buscador" placeholder="Buscar producto (ej: Malbec, Rutini...)" oninput="handleSearch()">
+        </div>
+
         <span class="filtro-label">1. Categoría</span>
         <div id="filtros-tipo" class="filtro-grupo"></div>
         
-        <div id="seccion-cepas">
+        <div id="seccion-cepas" style="display:none;">
             <span class="filtro-label">2. Variedad / Cepa</span>
             <div id="filtros-cepa" class="filtro-grupo"></div>
         </div>
@@ -77,7 +97,6 @@
     const WHATSAPP_NUMBER = "5493512345678"; 
 
     const TIPOS = ["Todos", "Ofertas", "Vino Tinto", "Vino Blanco", "Espumante", "Vino Rosado", "Otras Bebidas"];
-    
     const CEPAS = {
         "Vino Tinto": ["Todos", "Malbec", "Cabernet Franc", "Merlot", "Syrah", "Tempranillo", "Cabernet Sauvignon", "Pinot Noir", "Blend"],
         "Vino Blanco": ["Todos", "Dulce", "Sauvignon Blanc", "Torrontes", "Chardonnay", "Semillon"],
@@ -89,6 +108,13 @@
     let cart = [];
     let fTipo = 'Todos';
     let fCepa = 'Todos';
+    let searchTerm = '';
+
+    const normalizar = (texto) => {
+        return texto.toString().toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .trim();
+    };
 
     async function fetchProducts() {
         try {
@@ -98,7 +124,7 @@
             
             allProducts = rows.map(r => {
                 const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                if (c.length < 2) return null;
+                if (c.length < 5) return null;
                 const clean = (v) => v ? v.replace(/"/g, '').trim() : '';
                 return {
                     name: clean(c[0]), 
@@ -112,7 +138,7 @@
             renderFiltros();
             renderProducts();
             document.getElementById('loading').style.display = 'none';
-        } catch (e) { console.error("Error al cargar:", e); }
+        } catch (e) { console.error(e); }
     }
 
     function renderFiltros() {
@@ -127,6 +153,11 @@
         } else {
             seccionCepas.style.display = "none";
         }
+    }
+
+    function handleSearch() {
+        searchTerm = normalizar(document.getElementById('buscador').value);
+        renderProducts();
     }
 
     function setFiltro(cat, val) {
@@ -147,60 +178,52 @@
         const grid = document.getElementById('catalogo-grid');
         grid.innerHTML = '';
 
-        // FILTRO MEJORADO: Ignora mayúsculas y espacios extra
         const filtered = allProducts.filter(p => {
-            const matchTipo = fTipo === 'Todos' || p.tipo.toLowerCase().trim() === fTipo.toLowerCase().trim();
-            const matchCepa = fCepa === 'Todos' || p.cepa.toLowerCase().trim() === fCepa.toLowerCase().trim();
-            return matchTipo && matchCepa;
+            const matchTipo = fTipo === 'Todos' || normalizar(p.tipo) === normalizar(fTipo);
+            const matchCepa = fCepa === 'Todos' || normalizar(p.cepa) === normalizar(fCepa);
+            const matchSearch = searchTerm === '' || normalizar(p.name).includes(searchTerm);
+            return matchTipo && matchCepa && matchSearch;
         });
 
         if (filtered.length === 0) {
-            grid.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: #666; margin-top: 40px;">No hay productos en esta categoría.</p>`;
+            grid.innerHTML = `<p style="grid-column:1/-1; text-align:center; padding:40px; color:#666;">No se encontraron productos.</p>`;
         }
 
         filtered.forEach((p, index) => {
             grid.innerHTML += `
                 <div class="producto">
                     <img src="${p.img}">
-                    <div class="etiquetas-producto">
-                        <span class="tag">${p.tipo}</span>
-                        <span class="tag">${p.cepa}</span>
-                    </div>
                     <span class="nombre">${p.name}</span>
                     <span class="precio">$${p.price}</span>
-                    <div class="controles-compra">
-                        <div class="selector-cantidad">
-                            <button class="btn-qty" onclick="updateQty(this, -1)">-</button>
-                            <input type="number" class="input-qty" value="1" id="qty-${index}" readonly>
-                            <button class="btn-qty" onclick="updateQty(this, 1)">+</button>
-                        </div>
-                        <button class="btn-add" onclick="addItem('${p.name}', '${p.price}', 'qty-${index}')">Añadir</button>
+                    <div class="selector-cantidad">
+                        <button class="btn-qty" onclick="updateQty(this, -1)">-</button>
+                        <input type="number" class="input-qty" value="1" id="qty-${index}" readonly>
+                        <button class="btn-qty" onclick="updateQty(this, 1)">+</button>
                     </div>
+                    <button class="btn-add" onclick="addItem('${p.name}', '${p.price}', 'qty-${index}')">Añadir</button>
                 </div>`;
         });
     }
 
-    function addItem(name, price, qtyId) {
-        const qty = parseInt(document.getElementById(qtyId).value);
-        const existingItem = cart.find(item => item.n === name);
-        if (existingItem) { existingItem.q += qty; } 
-        else { cart.push({ n: name, p: price, q: qty }); }
-        document.getElementById(qtyId).value = 1;
-
-        const totalItems = cart.reduce((acc, item) => acc + item.q, 0);
+    function addItem(n, p, id) {
+        const qty = parseInt(document.getElementById(id).value);
+        const item = cart.find(i => i.n === n);
+        if (item) item.q += qty; else cart.push({n, p, q: qty});
+        document.getElementById(id).value = 1;
+        const total = cart.reduce((acc, i) => acc + i.q, 0);
         document.getElementById('cart-bar').style.display = 'block';
-        document.getElementById('count').innerText = totalItems;
+        document.getElementById('count').innerText = total;
     }
 
     function sendWpp() {
         let msg = "¡Hola Monje Negro! 🍷 Pedido de catálogo:%0A%0A";
-        let totalGeneral = 0;
+        let tot = 0;
         cart.forEach(i => {
-            const precioLimpio = parseFloat(i.p.replace(/\./g, '').replace(',', '.')) || 0;
-            totalGeneral += (precioLimpio * i.q);
+            const precio = parseFloat(i.p.replace(/\./g, '').replace(',', '.')) || 0;
+            tot += (precio * i.q);
             msg += `• ${i.q}x ${i.n} ($${i.p} c/u)%0A`;
         });
-        msg += `%0A*TOTAL ESTIMADO: $${totalGeneral.toLocaleString('es-AR')}*`;
+        msg += `%0A*TOTAL ESTIMADO: $${tot.toLocaleString('es-AR')}*`;
         window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank');
     }
     fetchProducts();
